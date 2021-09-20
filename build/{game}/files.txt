@@ -1,0 +1,8 @@
+*copy here*
+- avi/*
+- bmp/*
+- MULT.CNT
+- MULT.HLP
+- MULTIC.DMO
+- *.ttf
+- *.wav

@@ -1,0 +1,110 @@
+//------------------------------------------------
+//--- 010 Editor v8.0 Binary Template
+//
+//      File: libs.bt
+//   Authors: painter
+//   Version: 1.0.0.2
+//   Purpose: Parse MediaHouse libs files
+//  Category: Resources
+// File Mask: *.lib
+//  ID Bytes: 
+//   History:
+//   1.0.0.2    2020-07-30 Check index table sizing.
+//   1.0.0.1    2020-07-29 Added new magic for the header.
+//   1.0        2020-07-27 First version.
+//------------------------------------------------
+
+// Define custom colors
+
+#define HEADER_COLOR    0xFEF4FF
+#define CONTENT_COLOR   0xDDE9FF
+#define DATA_COLOR      0xFBFFE8
+#define OFFSET_COLOR    0xFFCEF0
+#define COUNT_COLOR     0xDCD1FF
+#define SIZE_COLOR      0xFFE9DD
+
+// Define structures used in libs files
+
+typedef struct
+{
+    DWORD   Magic <format=hex, comment=CommentMagic>;
+    SHORT   ItemsCount <bgcolor=COUNT_COLOR>;
+    SHORT   Version;
+    DWORD   ContentTableOffset <format=hex, bgcolor=OFFSET_COLOR>;
+} libheader_t;
+
+typedef struct (BYTE size)
+{
+    char    Filename[size];
+    DWORD   DataOffset <format=hex, bgcolor=OFFSET_COLOR>;
+    DWORD   DataSize <format=hex, bgcolor=SIZE_COLOR>;
+} libtable_t <optimize=true>;
+
+typedef struct (DWORD size)
+{
+    BYTE data[size];
+} libdata_t <optimize=false>;
+
+// Custom read functions for lib types
+
+string CommentMagic(DWORD &v)
+{
+    string s;
+    switch(v) 
+    {
+        case 0xC90064:
+        case 0xCA0065: s = "BMP Library"; break;
+        case 0xCA0066:
+        case 0xCB0066:
+        case 0xC90066: s = "Animations Library"; break;
+        case 0xCC0067: s = "Audio Library"; break;
+        default : s = "Unknown Library";
+    }
+    return s;
+}
+
+// Read format
+
+// Define the headers
+LittleEndian(); 
+SetBackColor(HEADER_COLOR);
+libheader_t header;
+
+if( header.ItemsCount > 0)
+{
+    SetBackColor(CONTENT_COLOR);
+    
+    // check max size of filename
+    local DWORD offset = header.ContentTableOffset;
+    local BYTE k;
+    for (k = 1; k < 32; ++k)
+    {
+        ++offset;
+        if (ReadUInt(offset) == 0x0C)
+        {
+            offset = k;
+            break;
+        }
+        if (offset > header.ContentTableOffset + 0x100)
+            break;
+    }
+    if( offset > 0x100 )
+    {
+        Warning( "Invalid table data." );
+        return -1;
+    }
+
+    FSeek(header.ContentTableOffset);
+
+    libtable_t table(offset)[header.ItemsCount];
+
+    FSeek(sizeof(libheader_t));
+    SetBackColor(DATA_COLOR);
+
+    local short i;
+    for (i = 0; i < header.ItemsCount; ++i)
+    {
+        FSeek(table[i].DataOffset);
+        libdata_t data(table[i].DataSize);
+    }
+}

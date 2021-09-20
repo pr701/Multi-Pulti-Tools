@@ -1,0 +1,8 @@
+*copy here*
+- multic.exe
+- Setup.ini
+- lead51n.dll
+
+*optional*
+- ddraw.dll
+- kernelex.dll
